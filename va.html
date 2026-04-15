@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>漫次元 | 手机漫画站</title>
+    <!-- Font Awesome 6 (免费图标库) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: #f5f7fb;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #1e293b;
+            line-height: 1.4;
+        }
+
+        /* 整体容器 — 移动端全屏布局 */
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 500px;
+            margin: 0 auto;
+            background: #ffffff;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 顶部导航栏 */
+        .header {
+            background: #ffffff;
+            padding: 18px 20px 12px;
+            border-bottom: 1px solid #f0f0f0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+        .header h1 {
+            font-size: 1.7rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ff7e5e, #feb47b);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+        }
+        .header p {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        /* 主内容区 — 滚动区域 */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 16px 20px;
+            scroll-behavior: smooth;
+        }
+
+        /* 页面容器 (切换用) */
+        .page {
+            display: none;
+            animation: fadeIn 0.25s ease;
+        }
+        .page.active-page {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+
+        /* 底部导航栏 */
+        .bottom-nav {
+            background: rgba(255,255,255,0.96);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 8px 12px 12px;
+            box-shadow: 0 -2px 12px rgba(0,0,0,0.02);
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            background: transparent;
+            border: none;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            transition: all 0.2s;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 30px;
+            font-weight: 500;
+        }
+        .nav-item i {
+            font-size: 1.5rem;
+            margin-bottom: 2px;
+        }
+        .nav-item.active {
+            color: #ff7e5e;
+            background: #fff1ed;
+        }
+        .nav-item span {
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        /* 通用卡片样式 */
+        .card {
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card-header {
+            padding: 16px 16px 8px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .more-link {
+            font-size: 0.7rem;
+            color: #ff7e5e;
+        }
+
+        /* 横向滚动区 (推荐漫画) */
+        .hor-scroll {
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            padding: 8px 12px 16px;
+            scrollbar-width: thin;
+            display: flex;
+            gap: 14px;
+        }
+        .hor-scroll::-webkit-scrollbar {
+            height: 3px;
+        }
+        .rec-card {
+            display: inline-block;
+            width: 130px;
+            background: #fef9f5;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+            vertical-align: top;
+            white-space: normal;
+            margin-right: 6px;
+        }
+        .rec-card:active { transform: scale(0.97);}
+        .rec-cover {
+            width: 100%;
+            height: 160px;
+            background: #ffe6dc;
+            object-fit: cover;
+        }
+        .rec-info {
+            padding: 10px 8px 12px;
+        }
+        .rec-title {
+            font-weight: 700;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .rec-author {
+            font-size: 0.65rem;
+            color: #7e8a98;
+            margin-top: 4px;
+        }
+
+        /* 漫画网格 (两列) */
+        .comics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 8px;
+        }
+        .comic-card {
+            background: #ffffff;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .comic-card:active { transform: scale(0.97); background: #fefaf8; }
+        .comic-cover {
+            width: 100%;
+            aspect-ratio: 2 / 2.5;
+            object-fit: cover;
+            background: #edd9ce;
+        }
+        .comic-detail {
+            padding: 10px 10px 14px;
+        }
+        .comic-title {
+            font-weight: 700;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .comic-author {
+            font-size: 0.7rem;
+            color: #7c8b9c;
+            margin-top: 4px;
+        }
+
+        /* 反馈表单 */
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: block;
+            margin-bottom: 8px;
+            color: #334155;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            background: #fafcff;
+            transition: 0.2s;
+            font-family: inherit;
+        }
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #ff9a6e;
+            box-shadow: 0 0 0 3px rgba(255,126,94,0.2);
+        }
+        .submit-btn {
+            background: linear-gradient(95deg, #ff7e5e, #feb47b);
+            border: none;
+            width: 100%;
+            padding: 14px;
+            border-radius: 40px;
+            font-weight: 700;
+            font-size: 1rem;
+            color: white;
+            margin-top: 8px;
+            box-shadow: 0 4px 8px rgba(255,110,64,0.2);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .submit-btn:active { transform: scale(0.97); opacity: 0.9;}
+
+        /* 个人页面 */
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 20px 16px;
+            background: linear-gradient(145deg, #fff9f5, #ffffff);
+            border-radius: 32px;
+            margin-bottom: 20px;
+        }
+        .avatar {
+            background: #ffdad2;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.8rem;
+            color: #ff7e5e;
+        }
+        .user-info h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+        .user-info p {
+            font-size: 0.75rem;
+            color: #6c7a8e;
+            margin-top: 4px;
+        }
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            background: #fef6f2;
+            padding: 14px 0;
+            border-radius: 40px;
+            margin-bottom: 24px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-num {
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: #ff7e5e;
+        }
+        .menu-list {
+            background: #ffffff;
+            border-radius: 28px;
+            overflow: hidden;
+        }
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 20px;
+            border-bottom: 1px solid #f0f2f5;
+            color: #1f2a40;
+            font-weight: 500;
+        }
+        .menu-item i:first-child {
+            width: 24px;
+            color: #ff8a6c;
+            font-size: 1.2rem;
+        }
+        .logout-btn {
+            margin-top: 24px;
+            text-align: center;
+            background: #fef2ef;
+            border-radius: 40px;
+            padding: 14px;
+            color: #e26d4a;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* 空白占位 */
+        .section-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin: 12px 0 8px 4px;
+        }
+        .banner {
+            background: linear-gradient(125deg, #ffede3, #fff1e8);
+            border-radius: 28px;
+            padding: 22px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .banner-text h3 {
+            font-size: 1.2rem;
+        }
+        .banner-text p {
+            font-size: 0.7rem;
+            color: #b16245;
+        }
+
+        /* 响应式优化 */
+        @media (max-width: 420px) {
+            .rec-card { width: 115px; }
+            .rec-cover { height: 140px; }
+            .comic-title { font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <!-- 顶部标题栏 -->
+    <div class="header">
+        <h1>漫次元</h1>
+        <p>发现·热血·治愈·冒险</p>
+    </div>
+
+    <!-- 主要内容区域，切换页面 -->
+    <div class="main-content" id="mainContent">
+        <!-- 首页 page -->
+        <div id="homePage" class="page active-page">
+            <!-- banner -->
+            <div class="banner">
+                <div class="banner-text">
+                    <h3>✨ 限时免费</h3>
+                    <p>热门新作抢先看，点击畅读</p>
+                </div>
+                <i class="fas fa-gem" style="font-size: 2.2rem; color:#ff9f7c;"></i>
+            </div>
+            <!-- 横向滚动推荐 -->
+            <div class="card">
+                <div class="card-header">
+                    <span>🔥 热门推荐</span>
+                    <span class="more-link">更多 <i class="fas fa-chevron-right"></i></span>
+                </div>
+                <div class="hor-scroll" id="homeScrollContainer"></div>
+            </div>
+            <!-- 编辑精选静态展示 -->
+            <div class="card">
+                <div class="card-header">
+                    <span>📖 编辑精选 · 本周必看</span>
+                </div>
+                <div style="padding: 0 16px 16px 16px;">
+                    <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
+                        <i class="fas fa-star" style="color: #ffaa33;"></i>
+                        <span style="font-weight: 500;">《星穹之下》</span>
+                        <span style="font-size: 0.7rem; color:#999;">9.8分</span>
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <i class="fas fa-star" style="color: #ffaa33;"></i>
+                        <span style="font-weight: 500;">《异界转生录》</span>
+                        <span style="font-size: 0.7rem; color:#999;">9.6分</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 漫画 page (所有漫画网格) -->
+        <div id="comicPage" class="page">
+            <div class="section-title"><i class="fas fa-book-open"></i> 全部漫画 · 热血连载</div>
+            <div id="comicsGridContainer" class="comics-grid"></div>
+        </div>
+
+        <!-- 反馈 page -->
+        <div id="feedbackPage" class="page">
+            <div class="card" style="padding: 16px 20px 24px;">
+                <h3 style="margin-bottom: 20px; font-weight: 700;"><i class="fas fa-comment-dots"></i> 告诉我们你的想法</h3>
+                <form id="feedbackForm">
+                    <div class="form-group">
+                        <label>昵称</label>
+                        <input type="text" id="fbName" placeholder="怎么称呼你？" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label>邮箱 (选填)</label>
+                        <input type="email" id="fbEmail" placeholder="用于回复">
+                    </div>
+                    <div class="form-group">
+                        <label>反馈内容</label>
+                        <textarea rows="4" id="fbMsg" placeholder="告诉我们你喜欢的漫画风格或者建议～" maxlength="200"></textarea>
+                    </div>
+                    <button type="submit" class="submit-btn"><i class="fas fa-paper-plane"></i> 提交反馈</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 我的 page -->
+        <div id="profilePage" class="page">
+            <div class="profile-header">
+                <div class="avatar">
+                    <i class="fas fa-user-astronaut"></i>
+                </div>
+                <div class="user-info">
+                    <h3>漫次元旅人</h3>
+                    <p><i class="fas fa-map-marker-alt"></i> 追番时长 · 256h</p>
+                </div>
+            </div>
+            <div class="stats-row">
+                <div class="stat-item"><div class="stat-num">36</div><div>收藏</div></div>
+                <div class="stat-item"><div class="stat-num">128</div><div>点赞</div></div>
+                <div class="stat-item"><div class="stat-num">8</div><div>足迹</div></div>
+            </div>
+            <div class="menu-list">
+                <div class="menu-item"><i class="fas fa-history"></i> 阅读记录 <i class="fas fa-chevron-right" style="margin-left: auto; font-size: 0.7rem;"></i></div>
+                <div class="menu-item"><i class="fas fa-heart"></i> 我的收藏 <i class="fas fa-chevron-right" style="margin-left: auto; font-size: 0.7rem;"></i></div>
+                <div class="menu-item"><i class="fas fa-download"></i> 离线缓存 <i class="fas fa-chevron-right" style="margin-left: auto; font-size: 0.7rem;"></i></div>
+                <div class="menu-item"><i class="fas fa-cog"></i> 设置 <i class="fas fa-chevron-right" style="margin-left: auto; font-size: 0.7rem;"></i></div>
+            </div>
+            <div class="logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i> 退出登录 (演示)
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部导航栏 -->
+    <div class="bottom-nav">
+        <button class="nav-item" data-page="home"><i class="fas fa-home"></i><span>首页</span></button>
+        <button class="nav-item" data-page="comic"><i class="fas fa-book"></i><span>漫画</span></button>
+        <button class="nav-item" data-page="feedback"><i class="fas fa-comment"></i><span>反馈</span></button>
+        <button class="nav-item" data-page="profile"><i class="fas fa-user"></i><span>我的</span></button>
+    </div>
+</div>
+
+<script>
+    // ----------------------------- 模拟漫画数据 ---------------------------------
+    const COMICS_DATA = [
+        { id: 1, title: "一拳超人", author: "ONE·村田雄介", cover: "https://picsum.photos/id/104/300/400", desc: "兴趣使然的英雄" },
+        { id: 2, title: "咒术回战", author: "芥见下下", cover: "https://picsum.photos/id/106/300/400", desc: "咒术大战" },
+        { id: 3, title: "海贼王", author: "尾田荣一郎", cover: "https://picsum.photos/id/13/300/400", desc: "伟大航路" },
+        { id: 4, title: "鬼灭之刃", author: "吾峠呼世晴", cover: "https://picsum.photos/id/20/300/400", desc: "兄妹羁绊" },
+        { id: 5, title: "进击的巨人", author: "谏山创", cover: "https://picsum.photos/id/22/300/400", desc: "自由之翼" },
+        { id: 6, title: "间谍过家家", author: "远藤达哉", cover: "https://picsum.photos/id/26/300/400", desc: "伪装家庭" },
+        { id: 7, title: "蓝色监狱", author: "金城宗幸", cover: "https://picsum.photos/id/29/300/400", desc: "足球狂想曲" },
+        { id: 8, title: "电锯人", author: "藤本树", cover: "https://picsum.photos/id/36/300/400", desc: "恶魔猎人" }
+    ];
+
+    // 渲染首页的横向滚动区域 (热门推荐前6个)
+    function renderHomeScroll() {
+        const container = document.getElementById('homeScrollContainer');
+        if (!container) return;
+        // 取前6个作为热门推荐
+        const hotData = COMICS_DATA.slice(0, 6);
+        container.innerHTML = hotData.map(comic => `
+            <div class="rec-card" data-id="${comic.id}" data-source="home">
+                <img class="rec-cover" src="${comic.cover}" alt="${comic.title}" loading="lazy" onerror="this.src='https://picsum.photos/id/1/200/300'">
+                <div class="rec-info">
+                    <div class="rec-title">${comic.title}</div>
+                    <div class="rec-author">${comic.author}</div>
+                </div>
+            </div>
+        `).join('');
+        // 添加点击事件（委托）
+        document.querySelectorAll('.rec-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = card.getAttribute('data-id');
+                const comic = COMICS_DATA.find(c => c.id == id);
+                if(comic) alert(`✨ 《${comic.title}》\n作者：${comic.author}\n简介：${comic.desc || '超人气漫画，等你来看！'}`);
+            });
+        });
+    }
+
+    // 渲染漫画页面网格 (全部漫画)
+    function renderComicsGrid() {
+        const gridContainer = document.getElementById('comicsGridContainer');
+        if (!gridContainer) return;
+        gridContainer.innerHTML = COMICS_DATA.map(comic => `
+            <div class="comic-card" data-id="${comic.id}">
+                <img class="comic-cover" src="${comic.cover}" alt="${comic.title}" loading="lazy" onerror="this.src='https://picsum.photos/id/42/200/300'">
+                <div class="comic-detail">
+                    <div class="comic-title">${comic.title}</div>
+                    <div class="comic-author">${comic.author}</div>
+                </div>
+            </div>
+        `).join('');
+        // 漫画卡片点击弹窗详情
+        document.querySelectorAll('.comic-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                const id = card.getAttribute('data-id');
+                const comic = COMICS_DATA.find(c => c.id == id);
+                if(comic) alert(`📘 《${comic.title}》\n✍️ ${comic.author}\n💡 ${comic.desc || '经典不容错过'}`);
+            });
+        });
+    }
+
+    // 页面切换 + 底部导航激活样式
+    function initPageSwitch() {
+        const navBtns = document.querySelectorAll('.nav-item');
+        const pages = {
+            home: document.getElementById('homePage'),
+            comic: document.getElementById('comicPage'),
+            feedback: document.getElementById('feedbackPage'),
+            profile: document.getElementById('profilePage')
+        };
+        // 默认激活首页
+        let currentPage = 'home';
+
+        function setActivePage(pageId) {
+            // 隐藏所有页面
+            Object.values(pages).forEach(page => {
+                if(page) page.classList.remove('active-page');
+            });
+            if(pages[pageId]) pages[pageId].classList.add('active-page');
+            // 更新底部导航样式
+            navBtns.forEach(btn => {
+                const dataPage = btn.getAttribute('data-page');
+                if(dataPage === pageId) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            // 动态改变头部小标题 (可选)
+            const headerTitle = document.querySelector('.header h1');
+            const headerSub = document.querySelector('.header p');
+            if(pageId === 'home') {
+                headerTitle.innerHTML = '漫次元';
+                headerSub.innerHTML = '发现·热血·治愈·冒险';
+            } else if(pageId === 'comic') {
+                headerTitle.innerHTML = '漫画库';
+                headerSub.innerHTML = '全收录 · 热门连载';
+            } else if(pageId === 'feedback') {
+                headerTitle.innerHTML = '心声反馈';
+                headerSub.innerHTML = '你的建议让漫画更好';
+            } else if(pageId === 'profile') {
+                headerTitle.innerHTML = '我的次元';
+                headerSub.innerHTML = '个人中心 · 收藏足迹';
+            }
+        }
+
+        navBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const page = btn.getAttribute('data-page');
+                if(page === 'home') setActivePage('home');
+                else if(page === 'comic') setActivePage('comic');
+                else if(page === 'feedback') setActivePage('feedback');
+                else if(page === 'profile') setActivePage('profile');
+                currentPage = page;
+            });
+        });
+        // 初始激活home
+        setActivePage('home');
+    }
+
+    // 反馈提交逻辑（模拟）
+    function initFeedback() {
+        const form = document.getElementById('feedbackForm');
+        if(!form) return;
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('fbName').value.trim();
+            const email = document.getElementById('fbEmail').value.trim();
+            const msg = document.getElementById('fbMsg').value.trim();
+            if(!name) {
+                alert('请填写昵称～ 让我们认识你 ✨');
+                return;
+            }
+            if(!msg) {
+                alert('反馈内容不能为空，告诉我们你想说的话吧~');
+                return;
+            }
+            // 模拟提交成功
+            alert(`📬 反馈已收到！\n感谢 ${name} 的宝贵意见，我们会认真阅读。`);
+            // 清空表单
+            document.getElementById('fbName').value = '';
+            document.getElementById('fbEmail').value = '';
+            document.getElementById('fbMsg').value = '';
+        });
+    }
+
+    // 个人页退出模拟
+    function initProfileActions() {
+        const logout = document.getElementById('logoutBtn');
+        if(logout) {
+            logout.addEventListener('click', () => {
+                alert('演示模式，点击“确定”重新登录 (无实际退出)');
+                // 可模拟简单提示效果
+            });
+        }
+        // 为个人页菜单项增加轻提示
+        const menuItems = document.querySelectorAll('.menu-item');
+        menuItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                const text = item.innerText.trim().split('\n')[0];
+                alert(`「${text}」功能开发中，敬请期待~`);
+            });
+        });
+        // 统计点击效果
+        const statItems = document.querySelectorAll('.stat-item');
+        statItems.forEach(stat => {
+            stat.addEventListener('click', () => alert('更多数据即将上线'));
+        });
+    }
+
+    // 优化所有图片加载错误时替换默认图
+    function handleImageErrors() {
+        document.addEventListener('error', (e) => {
+            const target = e.target;
+            if(target.tagName === 'IMG') {
+                target.src = 'https://picsum.photos/id/42/200/300';
+            }
+        }, true);
+    }
+
+    // 额外: 保证首页横向滚动卡片点击与漫画网格点击共存 (已做委托)
+    // 同时为了保证刚切换漫画页面时，事件绑定正常（卡片动态渲染后事件已添加），渲染函数在页面加载时调用即可
+    function initDynamicEvents() {
+        // 因为在renderComicsGrid和renderHomeScroll中直接绑定了卡片监听，重新调用无需二次绑定，但是以防万一在切换漫画页面时重新渲染也可以
+        // 为了避免重复渲染，但数据是不变的，初次加载渲染一次即可，无需重复渲染
+    }
+
+    // 可选：增加滚动条平滑处理
+    function fixScrollPosition() {
+        const main = document.querySelector('.main-content');
+        if(main) {
+            main.addEventListener('click', (e) => {});
+        }
+    }
+
+    // 执行所有初始化
+    document.addEventListener('DOMContentLoaded', () => {
+        renderHomeScroll();      // 首页横向滚动内容
+        renderComicsGrid();      // 漫画网格内容
+        initPageSwitch();        // 页面切换和底部导航
+        initFeedback();          // 反馈表单提交
+        initProfileActions();    // 个人页功能
+        handleImageErrors();     // 全局图片错误修正
+        
+        // 额外添加占位，防止部分图片加载失败时样式别扭
+        console.log('手机网站已加载 — 漫次元');
+    });
+</script>
+</body>
+</html>
